@@ -25,6 +25,24 @@ impl Platform {
         #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
         return Platform::Unknown;
     }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            Platform::MacOS => "macos",
+            Platform::Linux => "linux",
+            Platform::Wsl1 => "wsl1",
+            Platform::Wsl2 => "wsl2",
+            Platform::Windows => "windows",
+            Platform::Unknown => "unknown",
+        }
+    }
+
+    pub fn supports_unix_sockets(&self) -> bool {
+        match self {
+            Platform::MacOS | Platform::Linux | Platform::Wsl2 => true,
+            Platform::Wsl1 | Platform::Windows | Platform::Unknown => false,
+        }
+    }
 }
 
 #[cfg(target_os = "linux")]

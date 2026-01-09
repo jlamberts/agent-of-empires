@@ -44,7 +44,7 @@ impl HomeView {
         let group_tree = GroupTree::new_with_groups(&instances, &groups);
         let flat_items = flatten_tree(&group_tree, &instances);
 
-        Ok(Self {
+        let mut view = Self {
             storage,
             instances,
             instance_map,
@@ -59,7 +59,10 @@ impl HomeView {
             search_active: false,
             search_query: String::new(),
             filtered_items: None,
-        })
+        };
+
+        view.update_selected();
+        Ok(view)
     }
 
     pub fn reload(&mut self) -> anyhow::Result<()> {
