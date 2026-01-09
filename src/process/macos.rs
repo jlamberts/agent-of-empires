@@ -86,7 +86,7 @@ pub fn is_waiting_for_input(pid: u32) -> ProcessInputState {
     }
 
     let output_str = String::from_utf8_lossy(&output.stdout);
-    let parts: Vec<&str> = output_str.trim().split_whitespace().collect();
+    let parts: Vec<&str> = output_str.split_whitespace().collect();
 
     if parts.is_empty() {
         return ProcessInputState::Unknown;

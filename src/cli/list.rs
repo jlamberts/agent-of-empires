@@ -69,11 +69,10 @@ pub async fn run(profile: &str, args: ListArgs) -> Result<()> {
     // Table output
     println!("Profile: {}\n", storage.profile());
     println!(
-        "{:<width_title$} {:<width_group$} {:<width_path$} {}",
+        "{:<width_title$} {:<width_group$} {:<width_path$} ID",
         "TITLE",
         "GROUP",
         "PATH",
-        "ID",
         width_title = TABLE_COL_TITLE,
         width_group = TABLE_COL_GROUP,
         width_path = TABLE_COL_PATH
@@ -153,11 +152,10 @@ async fn run_all_profiles(json: bool) -> Result<()> {
 
                 println!("\n═══ Profile: {} ═══\n", profile_name);
                 println!(
-                    "{:<width_title$} {:<width_group$} {:<width_path$} {}",
+                    "{:<width_title$} {:<width_group$} {:<width_path$} ID",
                     "TITLE",
                     "GROUP",
                     "PATH",
-                    "ID",
                     width_title = TABLE_COL_TITLE,
                     width_group = TABLE_COL_GROUP,
                     width_path = TABLE_COL_PATH

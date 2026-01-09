@@ -257,38 +257,30 @@ impl HomeView {
             KeyCode::Enter => {
                 if let Some(id) = &self.selected_session {
                     return Some(Action::AttachSession(id.clone()));
-                } else if let Some(item) = self.flat_items.get(self.cursor) {
-                    if let Item::Group { path, .. } = item {
+                } else if let Some(Item::Group { path, .. }) = self.flat_items.get(self.cursor) {
+                    self.group_tree.toggle_collapsed(path);
+                    self.flat_items = flatten_tree(&self.group_tree, &self.instances);
+                }
+            }
+            KeyCode::Left | KeyCode::Char('h') => {
+                if let Some(Item::Group {
+                    path, collapsed, ..
+                }) = self.flat_items.get(self.cursor)
+                {
+                    if !collapsed {
                         self.group_tree.toggle_collapsed(path);
                         self.flat_items = flatten_tree(&self.group_tree, &self.instances);
                     }
                 }
             }
-            KeyCode::Left | KeyCode::Char('h') => {
-                // Collapse current group or go to parent
-                if let Some(item) = self.flat_items.get(self.cursor) {
-                    if let Item::Group {
-                        path, collapsed, ..
-                    } = item
-                    {
-                        if !collapsed {
-                            self.group_tree.toggle_collapsed(path);
-                            self.flat_items = flatten_tree(&self.group_tree, &self.instances);
-                        }
-                    }
-                }
-            }
             KeyCode::Right | KeyCode::Char('l') => {
-                // Expand current group
-                if let Some(item) = self.flat_items.get(self.cursor) {
-                    if let Item::Group {
-                        path, collapsed, ..
-                    } = item
-                    {
-                        if *collapsed {
-                            self.group_tree.toggle_collapsed(path);
-                            self.flat_items = flatten_tree(&self.group_tree, &self.instances);
-                        }
+                if let Some(Item::Group {
+                    path, collapsed, ..
+                }) = self.flat_items.get(self.cursor)
+                {
+                    if *collapsed {
+                        self.group_tree.toggle_collapsed(path);
+                        self.flat_items = flatten_tree(&self.group_tree, &self.instances);
                     }
                 }
             }

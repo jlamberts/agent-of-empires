@@ -107,8 +107,8 @@ impl Preview {
 fn shorten_path(path: &str) -> String {
     if let Some(home) = dirs::home_dir() {
         if let Some(home_str) = home.to_str() {
-            if path.starts_with(home_str) {
-                return format!("~{}", &path[home_str.len()..]);
+            if let Some(stripped) = path.strip_prefix(home_str) {
+                return format!("~{}", stripped);
             }
         }
     }

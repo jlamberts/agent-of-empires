@@ -145,9 +145,9 @@ pub fn get_update_settings() -> UpdatesConfig {
 pub fn get_claude_config_dir() -> Option<PathBuf> {
     let config = load_config().ok().flatten()?;
     config.claude.config_dir.map(|s| {
-        if s.starts_with("~/") {
+        if let Some(stripped) = s.strip_prefix("~/") {
             if let Some(home) = dirs::home_dir() {
-                return home.join(&s[2..]);
+                return home.join(stripped);
             }
         }
         PathBuf::from(s)

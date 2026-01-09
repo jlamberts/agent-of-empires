@@ -195,40 +195,9 @@ fn sanitize_session_name(name: &str) -> String {
 }
 
 fn detect_status_from_content(content: &str, tool: &str, fg_pid: Option<u32>) -> Status {
-    // #region agent log
-    use std::io::Write;
-    let log_path = "/Users/nbrake/scm/agent-deck/.cursor/debug.log";
-    if let Ok(mut f) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(log_path)
-    {
-        let _ = writeln!(
-            f,
-            r#"{{"hypothesisId":"F","location":"session.rs:detect_status_from_content","message":"tool value check","data":{{"tool":"{}","fg_pid":{:?}}}}}"#,
-            tool, fg_pid
-        );
-    }
-    // #endregion
-
     // Layer 1: Process state detection (most reliable)
     if let Some(pid) = fg_pid {
         let proc_state = process::is_waiting_for_input(pid);
-
-        // #region agent log
-        if let Ok(mut f) = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(log_path)
-        {
-            let _ = writeln!(
-                f,
-                r#"{{"hypothesisId":"B","location":"session.rs:detect_status_from_content","message":"process state","data":{{"tool":"{}","pid":{},"proc_state":"{:?}"}}}}"#,
-                tool, pid, proc_state
-            );
-        }
-        // #endregion
-
         match proc_state {
             ProcessInputState::WaitingForInput => {
                 return Status::Waiting;
@@ -252,43 +221,11 @@ fn detect_status_from_content(content: &str, tool: &str, fg_pid: Option<u32>) ->
     let last_content = last_lines.join("\n");
     let last_content_lower = last_content.to_lowercase();
 
-    // #region agent log
-    if let Ok(mut f) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(log_path)
-    {
-        let escaped = last_content_lower
-            .replace('\\', "\\\\")
-            .replace('"', "\\\"")
-            .replace('\n', "\\n");
-        let _ = writeln!(
-            f,
-            r#"{{"hypothesisId":"C","location":"session.rs:detect_status_from_content","message":"content for pattern matching","data":{{"tool":"{}","line_count":{},"last_content":"{}"}}}}"#,
-            tool,
-            lines.len(),
-            escaped
-        );
-    }
-    // #endregion
-
-    // #region agent log
     let effective_tool = if tool == "shell" && is_opencode_content(&last_content_lower) {
-        if let Ok(mut f) = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(log_path)
-        {
-            let _ = writeln!(
-                f,
-                r#"{{"hypothesisId":"FIX","location":"session.rs:detect_status_from_content","message":"auto-detected opencode from content","data":{{}}}}"#
-            );
-        }
         "opencode"
     } else {
         tool
     };
-    // #endregion
 
     match effective_tool {
         "claude" => detect_claude_status(&last_content),
@@ -384,11 +321,6 @@ fn detect_claude_status(content: &str) -> Status {
 }
 
 fn detect_opencode_status(content: &str) -> Status {
-    // #region agent log
-    use std::io::Write;
-    let log_path = "/Users/nbrake/scm/agent-deck/.cursor/debug.log";
-    // #endregion
-
     let lines: Vec<&str> = content.lines().collect();
     let last_15: Vec<&str> = lines
         .iter()
@@ -401,59 +333,18 @@ fn detect_opencode_status(content: &str) -> Status {
     let recent_lower = recent_content.to_lowercase();
 
     // RUNNING: OpenCode shows "esc to interrupt" at the bottom when busy (same as Claude Code)
-    let has_esc_interrupt =
-        recent_lower.contains("esc to interrupt") || recent_lower.contains("esc interrupt");
-
-    // #region agent log
-    if let Ok(mut f) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(log_path)
-    {
-        let _ = writeln!(
-            f,
-            r#"{{"hypothesisId":"D","location":"session.rs:detect_opencode_status","message":"checking esc interrupt","data":{{"has_esc_interrupt":{}}}}}"#,
-            has_esc_interrupt
-        );
-    }
-    // #endregion
-
-    if has_esc_interrupt {
+    if recent_lower.contains("esc to interrupt") || recent_lower.contains("esc interrupt") {
         return Status::Running;
     }
 
     // Also check for spinner characters in last 5 lines
     let last_5: Vec<&str> = lines.iter().rev().take(5).copied().collect();
-    let mut has_spinner = false;
     for line in &last_5 {
         for spinner in SPINNER_CHARS {
             if line.contains(spinner) {
-                has_spinner = true;
-                break;
+                return Status::Running;
             }
         }
-    }
-
-    // #region agent log
-    if let Ok(mut f) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(log_path)
-    {
-        let last5_escaped: Vec<String> = last_5
-            .iter()
-            .map(|s| s.replace('\\', "\\\\").replace('"', "\\\""))
-            .collect();
-        let _ = writeln!(
-            f,
-            r#"{{"hypothesisId":"D","location":"session.rs:detect_opencode_status","message":"checking spinners","data":{{"has_spinner":{},"last_5":{:?}}}}}"#,
-            has_spinner, last5_escaped
-        );
-    }
-    // #endregion
-
-    if has_spinner {
-        return Status::Running;
     }
 
     // WAITING: Selection menus (shows "Enter to select" or "Esc to cancel")
@@ -484,33 +375,7 @@ fn detect_opencode_status(content: &str) -> Status {
     }
 
     // WAITING: Check if last non-empty line is input prompt
-    let last_line_result = lines.iter().rev().find(|l| !l.trim().is_empty());
-
-    // #region agent log
-    if let Ok(mut f) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(log_path)
-    {
-        let line_info = last_line_result
-            .map(|l| {
-                let clean = strip_ansi(l).trim().to_string();
-                format!(
-                    "raw='{}', clean='{}'",
-                    l.replace('\\', "\\\\").replace('"', "\\\""),
-                    clean.replace('\\', "\\\\").replace('"', "\\\"")
-                )
-            })
-            .unwrap_or_else(|| "none".to_string());
-        let _ = writeln!(
-            f,
-            r#"{{"hypothesisId":"E","location":"session.rs:detect_opencode_status","message":"last line check","data":{{"last_line":"{}"}}}}"#,
-            line_info
-        );
-    }
-    // #endregion
-
-    if let Some(last_line) = last_line_result {
+    if let Some(last_line) = lines.iter().rev().find(|l| !l.trim().is_empty()) {
         let clean_line = strip_ansi(last_line).trim().to_string();
 
         // OpenCode input prompts
@@ -548,19 +413,6 @@ fn detect_opencode_status(content: &str) -> Status {
             }
         }
     }
-
-    // #region agent log
-    if let Ok(mut f) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(log_path)
-    {
-        let _ = writeln!(
-            f,
-            r#"{{"hypothesisId":"D","location":"session.rs:detect_opencode_status","message":"returning Idle - no patterns matched","data":{{}}}}"#
-        );
-    }
-    // #endregion
 
     Status::Idle
 }

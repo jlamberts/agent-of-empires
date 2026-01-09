@@ -169,14 +169,12 @@ async fn attached_mcps(profile: &str, args: McpAttachedArgs) -> Result<()> {
 
     if args.json {
         println!("{}", serde_json::to_string_pretty(&attached)?);
+    } else if attached.is_empty() {
+        println!("No MCPs attached to session: {}", inst.title);
     } else {
-        if attached.is_empty() {
-            println!("No MCPs attached to session: {}", inst.title);
-        } else {
-            println!("MCPs attached to '{}':\n", inst.title);
-            for name in &attached {
-                println!("  • {}", name);
-            }
+        println!("MCPs attached to '{}':\n", inst.title);
+        for name in &attached {
+            println!("  • {}", name);
         }
     }
 
